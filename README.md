@@ -1,6 +1,6 @@
-# SimClic - Sistema de Visualización de Horarios Universitarios 🏥📅
+# Sistema de Visualización de Horarios 🏥📅
 
-**SimClic** es una aplicación de escritorio nativa para Windows diseñada para la gestión y visualización dinámica de la ocupación de salas, laboratorios y consultorios clínicos universitarios en una línea de tiempo diaria.
+Aplicación de escritorio nativa para Windows diseñada para la gestión y visualización dinámica de la ocupación de salas, laboratorios y consultorios clínicos universitarios en una línea de tiempo diaria.
 
 ---
 
@@ -14,7 +14,7 @@ La aplicación fue desarrollada utilizando un stack moderno, robusto y de alto r
   - [pandas](https://pandas.pydata.org/): Normalización, filtrado y estructura de datos tabulares.
   - [openpyxl](https://openpyxl.readthedocs.io/): Lectura e interpretación de archivos Excel `.xlsx` / `.xls`.
 - **Empaquetado y Distribución**:
-  - [PyInstaller](https://pyinstaller.org/): Generación del binario ejecutable independiente (`SimClic.exe`) sin necesidad de que el usuario final tenga Python instalado.
+  - [PyInstaller](https://pyinstaller.org/): Generación del binario ejecutable independiente (`.exe`) sin necesidad de que el usuario final tenga Python instalado.
   - [Inno Setup](https://jrsoftware.org/isinfo.php): Generador del instalador formal de Windows con asistente de instalación, accesos directos y compatibilidad con actualizaciones automáticas.
 
 ---
@@ -89,13 +89,13 @@ Ubicado en la barra inferior, permite alternar la vista central entre:
 ## 📁 Estructura del Proyecto
 
 ```
-Simclic/
+Horarios/
 ├── main.py                     # Punto de entrada de la aplicación
 ├── requirements.txt            # Dependencias del entorno Python
 ├── build.spec                  # Configuración de compilación con PyInstaller
 ├── installer.iss               # Script de empaquetado para Inno Setup
 ├── create_test_excel.py        # Generador del archivo Excel de prueba
-├── datos_prueba.xlsx           # Excel de demostración con 15 sesiones
+├── datos_prueba.xlsx           # Excel de demostración con sesiones de prueba
 ├── app/
 │   ├── models/
 │   │   └── schedule.py         # Modelos de datos, salas por piso y reglas de colores
@@ -105,9 +105,7 @@ Simclic/
 │       ├── main_window.py      # Ventana principal, barra superior y diálogos
 │       ├── timeline_view.py    # Canvas gráfico de la línea de tiempo
 │       └── floor_panel.py      # Barra selectora y filtro por pisos
-└── dist/
-    └── SimClic/
-        └── SimClic.exe         # Ejecutable independiente compilado
+└── dist/                       # Carpeta con los binarios compilados
 ```
 
 ---
@@ -129,7 +127,7 @@ Para generar el archivo ejecutable portátil:
 ```powershell
 python -m PyInstaller --clean --noconfirm build.spec
 ```
-El resultado se generará en: `dist\SimClic\SimClic.exe`.
+El resultado se generará en la carpeta `dist\`.
 
 ### 3. Creación del Instalador de Windows
 1. Descarga e instala [Inno Setup Compiler](https://jrsoftware.org/isdl.php).
