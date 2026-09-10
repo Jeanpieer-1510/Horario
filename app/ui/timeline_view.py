@@ -23,7 +23,8 @@ from PyQt6.QtGui import (
 )
 
 from app.models.schedule import (
-    ClassSession, FLOOR_1_ROOMS, FLOOR_2_ROOMS, FLOORS, get_session_color
+    ClassSession, FLOOR_1_ROOMS, FLOOR_2_ROOMS, FLOORS, get_session_color,
+    get_course_short_name
 )
 
 # ─── Constantes de layout ─────────────────────────────────────────────────────
@@ -354,12 +355,12 @@ class TimelineCanvas(QWidget):
         # Texto
         text_rect = rect.adjusted(7, 2, -3, -2)
         if text_rect.width() > 16 and text_rect.height() > 8:
-            # Nombre de sesión
+            # Nombre del curso (solo curso, sin tema completo)
             font = QFont("Segoe UI", 7, QFont.Weight.Bold)
             painter.setFont(font)
             painter.setPen(QColor("#FFFFFF"))
             fm = QFontMetrics(font)
-            session_text = session.session_name or "(Sin nombre)"
+            session_text = get_course_short_name(session.session_name) or "(Sin curso)"
             elided = fm.elidedText(session_text, Qt.TextElideMode.ElideRight,
                                    int(text_rect.width()))
 
@@ -519,15 +520,15 @@ class TimelineCanvas(QWidget):
 
         if found:
             self.setCursor(Qt.CursorShape.PointingHandCursor)
+            course_name = get_course_short_name(found.session_name)
             tooltip = (
-                f"<b>{found.session_name}</b><br>"
+                f"<b>Curso:</b> {course_name}<br>"
                 f"<b>Ambiente:</b> {found.room}<br>"
                 f"<b>Horario:</b> {found.start_time.strftime('%H:%M')} - "
                 f"{found.end_time.strftime('%H:%M')}<br>"
                 f"<b>Duración:</b> {found.duration_minutes} min<br>"
                 f"<b>Docente líder:</b> {found.lead_teacher or 'N/A'}<br>"
-                f"<b>Colaboradores:</b> {found.collab_teachers or 'N/A'}<br>"
-                f"<b>Pacientes:</b> {found.standardized_patients or 'N/A'}"
+                f"<b>Colaboradores:</b> {found.collab_teachers or 'N/A'}"
             )
             QToolTip.showText(
                 QCursor.pos(), tooltip, self,

@@ -3,8 +3,8 @@ Ventana principal de la aplicación de Horarios Universitarios.
 Diseño basado en la imagen de referencia UCS Actividades:
 - Header azul oscuro con logo y reloj
 - Toolbar con botones de carga y navegación de fecha
-- Vista de línea de tiempo con tema claro
-- Panel inferior de pisos
+- Vista central alternable: Línea de Tiempo (Piso 1 / Piso 2) o Croquis Interactivo (Piso 1 / Piso 2)
+- Panel inferior de navegación entre Horarios y Croquis
 """
 import os
 from datetime import date, datetime
@@ -13,14 +13,16 @@ from typing import List, Optional
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QFileDialog, QSplitter,
-    QFrame, QDialog, QTextEdit, QMessageBox, QApplication
+    QFrame, QDialog, QTextEdit, QMessageBox, QApplication,
+    QStackedWidget
 )
 from PyQt6.QtCore import Qt, QDate, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont, QColor
 
-from app.models.schedule import ClassSession
+from app.models.schedule import ClassSession, get_course_short_name
 from app.services.excel_reader import read_excel
 from app.ui.timeline_view import TimelineView
+from app.ui.croquis_view import CroquisView
 from app.ui.floor_panel import FloorPanel
 
 
@@ -159,7 +161,7 @@ class SessionDetailDialog(QDialog):
     def __init__(self, session: ClassSession, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Detalle de Sesión")
-        self.setMinimumSize(520, 360)
+        self.setMinimumSize(500, 320)
         self.setStyleSheet("""
             QDialog { background: #FFFFFF; }
             QLabel { font-family: 'Segoe UI'; color: #111827; }
@@ -175,10 +177,11 @@ class SessionDetailDialog(QDialog):
         layout.setContentsMargins(24, 24, 24, 20)
         layout.setSpacing(14)
 
-        # Título
-        title = QLabel(session.session_name or "Sin nombre")
+        # Título con nombre del curso
+        course_short = get_course_short_name(session.session_name) or "Sin curso"
+        title = QLabel(f"Curso: {course_short}")
         title.setStyleSheet("""
-            font-size: 15px; font-weight: bold; color: #1E40AF;
+            font-size: 16px; font-weight: bold; color: #1E40AF;
             padding: 10px 14px;
             background: #EFF6FF;
             border-radius: 8px;
@@ -187,7 +190,7 @@ class SessionDetailDialog(QDialog):
         title.setWordWrap(True)
         layout.addWidget(title)
 
-        # Grilla de información
+        # Grilla de información (sin fila de pacientes)
         info = QFrame()
         info.setStyleSheet("""
             QFrame {
@@ -208,7 +211,6 @@ class SessionDetailDialog(QDialog):
             ("🏢 Piso",            session.floor),
             ("👨‍🏫 Docente Líder",   session.lead_teacher or "N/A"),
             ("👥 Colaboradores",   session.collab_teachers or "N/A"),
-            ("🧑‍⚕️ Pacientes",      session.standardized_patients or "N/A"),
         ]
 
         for lbl, val in fields:
@@ -295,7 +297,20 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("SimClic · Horarios Universitarios")
         self.setMinimumSize(1200, 700)
         self.resize(1440, 860)
-        # Fondo general blanco
+
+        # Cargar ícono de la ventana
+        base_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        ico_p = os.path.join(base_root, "assets", "app_icon.ico")
+        png_p = os.path.join(base_root, "assets", "app_icon.png")
+        from PyQt6.QtGui import QIcon
+        win_icon = QIcon()
+        if os.path.exists(ico_p):
+            win_icon.addFile(ico_p)
+        if os.path.exists(png_p):
+            win_icon.addFile(png_p)
+        if not win_icon.isNull():
+            self.setWindowIcon(win_icon)
+
         self.setStyleSheet("""
             QMainWindow { background: #F1F3F9; }
             QToolTip {
@@ -323,16 +338,22 @@ class MainWindow(QMainWindow):
         # Toolbar
         main_layout.addWidget(self._build_toolbar())
 
-        # Timeline central (ocupa todo el espacio principal)
+        # Contenedor central apilado (Timeline / Croquis)
+        self._stack = QStackedWidget()
+
         self._timeline = TimelineView()
         self._timeline.session_clicked.connect(self._show_session_detail)
-        main_layout.addWidget(self._timeline, 1)
+        self._stack.addWidget(self._timeline)  # Index 0
 
-        # Panel / Barra inferior de pisos
+        self._croquis = CroquisView("Primer Piso")
+        self._stack.addWidget(self._croquis)   # Index 1
+
+        main_layout.addWidget(self._stack, 1)
+
+        # Panel inferior de navegación
         self._floor_panel = FloorPanel()
-        self._floor_panel.floor_selected.connect(self._on_floor_changed)
+        self._floor_panel.view_changed.connect(self._on_view_changed)
         main_layout.addWidget(self._floor_panel)
-
 
     # ── Header ──────────────────────────────────────────────────────────────
     def _build_header(self) -> QWidget:
@@ -461,9 +482,9 @@ class MainWindow(QMainWindow):
         self._date_nav.date_changed.connect(self._on_date_changed)
         layout.addWidget(self._date_nav)
 
-        # Etiqueta "Línea de Tiempo Diaria"
-        view_label = QLabel("Línea de Tiempo · Salas")
-        view_label.setStyleSheet(f"""
+        # Etiqueta de vista activa
+        self._view_label = QLabel("Línea de Tiempo · Piso 1")
+        self._view_label.setStyleSheet(f"""
             color: {ACCENT};
             font-family: 'Segoe UI';
             font-size: 12px;
@@ -473,7 +494,7 @@ class MainWindow(QMainWindow):
             border-radius: 12px;
             padding: 3px 12px;
         """)
-        layout.addWidget(view_label)
+        layout.addWidget(self._view_label)
 
         layout.addStretch()
 
@@ -574,6 +595,7 @@ class MainWindow(QMainWindow):
 
     def _update_view(self, sessions: List[ClassSession]):
         self._timeline.load_sessions(sessions)
+        self._croquis.load_sessions(sessions)
         self._floor_panel.update_class_indicators(sessions)
 
     def _on_date_changed(self, new_date: date):
@@ -586,10 +608,24 @@ class MainWindow(QMainWindow):
         dlg = SessionDetailDialog(session, self)
         dlg.exec()
 
-    def _on_floor_changed(self, floor_name: str):
-        self._timeline.set_selected_floor(floor_name)
-        if floor_name == "all":
-            self.statusBar().showMessage("Mostrando todos los pisos")
-        else:
-            self.statusBar().showMessage(f"Mostrando ambientes de: {floor_name}")
-
+    def _on_view_changed(self, view_key: str):
+        if view_key == "horario_p1":
+            self._stack.setCurrentWidget(self._timeline)
+            self._timeline.set_selected_floor("Primer Piso")
+            self._view_label.setText("Línea de Tiempo · Piso 1")
+            self.statusBar().showMessage("Mostrando Línea de Tiempo del Piso 1")
+        elif view_key == "horario_p2":
+            self._stack.setCurrentWidget(self._timeline)
+            self._timeline.set_selected_floor("Segundo Piso")
+            self._view_label.setText("Línea de Tiempo · Piso 2")
+            self.statusBar().showMessage("Mostrando Línea de Tiempo del Piso 2")
+        elif view_key == "croquis_p1":
+            self._stack.setCurrentWidget(self._croquis)
+            self._croquis.set_floor("Primer Piso")
+            self._view_label.setText("Croquis Interactivo · Piso 1")
+            self.statusBar().showMessage("Mostrando Croquis Interactivo del Piso 1 (Haga clic en un ambiente)")
+        elif view_key == "croquis_p2":
+            self._stack.setCurrentWidget(self._croquis)
+            self._croquis.set_floor("Segundo Piso")
+            self._view_label.setText("Croquis Interactivo · Piso 2")
+            self.statusBar().showMessage("Mostrando Croquis Interactivo del Piso 2 (Haga clic en un ambiente)")

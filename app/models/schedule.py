@@ -52,6 +52,7 @@ FLOOR_1_ROOMS = [
 ]
 
 FLOOR_2_ROOMS = [
+    "AUDITORIO",
     "SALA DE HABILIDADES 5",
     "SALA DE HABILIDADES 1",
     "SALA DE HABILIDADES 2",
@@ -112,9 +113,81 @@ def clean_text(text: str) -> str:
     """Limpia caracteres como corchetes y signos para facilitar búsqueda de prefijo."""
     if not text:
         return ""
-    # Quitar corchetes, guiones iniciales, etc.
     cleaned = text.upper().replace("[", " ").replace("]", " ").replace(":", " ").replace("-", " ")
     return " ".join(cleaned.split())
+
+
+def get_course_short_name(session_name: str) -> str:
+    """
+    Extrae únicamente el nombre/código del curso al que pertenece la sesión,
+    sin mostrar el tema completo.
+    Ejemplo: '[SimPed] - Paro Cardiorrespiratorio' -> 'SimPed'
+    """
+    if not session_name:
+        return ""
+
+    raw = session_name.strip()
+    norm = clean_text(raw)
+
+    # 1. Enfermería -> ENF
+    for pref in ENFERMERIA_PREFIXES:
+        if norm.startswith(pref) or f" {pref} " in f" {norm} ":
+            return "ENF"
+
+    # 2. Obstetricia -> OBST
+    for pref in OBSTETRICIA_PREFIXES:
+        if norm.startswith(pref) or f" {pref} " in f" {norm} ":
+            return "OBST"
+
+    # 3. Medicina Humana (prefijos específicos)
+    med_mappings = [
+        ("SIMPED", "SimPed"),
+        ("SIMQX", "SimQx"),
+        ("SIMGO", "SimGO"),
+        ("MED SBS", "MED SBS"),
+        ("MED-SBS", "MED SBS"),
+        ("SBS", "MED SBS"),
+        ("SCI", "SCI"),
+        ("PAX", "PAX"),
+        ("EXT CIRG", "Ext Cirg"),
+        ("EXT CIRUGIA", "Ext Cirg"),
+        ("EXT CIR", "Ext Cirg"),
+        ("EXT GYO", "Ext GyO"),
+        ("EXT GY O", "Ext GyO"),
+        ("EXT G Y O", "Ext GyO"),
+        ("EXT. GYO", "Ext GyO"),
+        ("EXT G&O", "Ext GyO"),
+        ("EXT MED", "Ext Med"),
+        ("EXT. MED", "Ext Med"),
+        ("EXT PED", "Ext Ped"),
+        ("EXT. PED", "Ext Ped"),
+        ("ECOGRAFIA", "Ecografía"),
+        ("ECOGRAFÍA", "Ecografía"),
+        ("ECOGRAF", "Ecografía"),
+    ]
+
+    for pref, display in med_mappings:
+        if norm.startswith(pref) or f" {pref} " in f" {norm} ":
+            return display
+
+    # 4. Si viene entre corchetes ej. [Curso ABC]
+    if "[" in raw and "]" in raw:
+        start = raw.find("[") + 1
+        end = raw.find("]")
+        inside = raw[start:end].strip()
+        if inside:
+            return inside
+
+    # 5. Si viene con guión o dos puntos ej. "Curso - Tema"
+    for sep in [" - ", ": ", " – "]:
+        if sep in raw:
+            return raw.split(sep, 1)[0].strip()
+
+    # Si no tiene separador, tomar las 2 primeras palabras
+    parts = raw.split()
+    if len(parts) <= 2:
+        return raw
+    return " ".join(parts[:2])
 
 
 def get_session_color(session_name: str, index: int = 0) -> str:
@@ -140,7 +213,6 @@ def get_session_color(session_name: str, index: int = 0) -> str:
             return COLOR_MEDICINA
 
     return COLOR_MEDICINA
-
 
 
 def normalize_room_name(raw_name: str) -> str:
@@ -170,3 +242,4 @@ def find_floor_for_room(raw_room: str) -> str:
             return "Segundo Piso"
 
     return "Primer Piso"  # fallback
+

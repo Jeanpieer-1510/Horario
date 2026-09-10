@@ -1,6 +1,6 @@
 ; Script de Inno Setup para crear el instalador de SimClic
 #define MyAppName "Horarios SimClic"
-#define MyAppVersion "1.4.0"
+#define MyAppVersion "2.0.0"
 #define MyAppPublisher "Universidad"
 #define MyAppExeName "SimClic.exe"
 
@@ -14,6 +14,8 @@ DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=C:\Users\jeanp\OneDrive\Documentos\Simclic\dist_installer
 OutputBaseFilename=SimClic_Instalador_v1.0
+SetupIconFile=C:\Users\jeanp\OneDrive\Documentos\Simclic\assets\app_icon.ico
+UninstallIconFile=C:\Users\jeanp\OneDrive\Documentos\Simclic\assets\app_icon.ico
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -28,8 +30,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "C:\Users\jeanp\OneDrive\Documentos\Simclic\dist\SimClic\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\assets\app_icon.ico"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\assets\app_icon.ico"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent

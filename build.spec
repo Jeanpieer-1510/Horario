@@ -65,7 +65,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,          # Reemplazar con 'assets/icons/app.ico' cuando haya ícono
+    icon='assets/app_icon.ico',
 )
 
 coll = COLLECT(
